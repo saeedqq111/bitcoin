@@ -33,6 +33,8 @@ LIBBITCOIN_CRYPTO_BASE=crypto/libbitcoin_crypto_base.a
 LIBBITCOINQT=qt/libbitcoinqt.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
 
+LIBNIAB_WS=libniab_ws.a
+
 if ENABLE_ZMQ
 LIBBITCOIN_ZMQ=libbitcoin_zmq.a
 endif
@@ -70,6 +72,7 @@ EXTRA_LIBRARIES += \
   $(LIBBITCOIN_CONSENSUS) \
   $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_CLI) \
+	$(LIBNIAB_WS) \
   $(LIBBITCOIN_WALLET) \
   $(LIBBITCOIN_WALLET_TOOL) \
   $(LIBBITCOIN_ZMQ)
@@ -95,6 +98,9 @@ if ENABLE_WALLET
 if BUILD_BITCOIN_WALLET
   bin_PROGRAMS += bitcoin-wallet
 endif
+endif
+if BUILD_NIAB_WS
+  bin_PROGRAMS += niab-ws
 endif
 
 .PHONY: FORCE check-symbols check-security
@@ -487,6 +493,14 @@ libbitcoin_cli_a_SOURCES = \
 nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
+# niab-ws
+libniab_ws_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+libniab_ws_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libniab_ws_a_SOURCES = \
+  rpc/client.cpp \
+  $(BITCOIN_CORE_H)
+#
+
 # bitcoind binary #
 bitcoind_SOURCES = bitcoind.cpp
 bitcoind_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
@@ -533,6 +547,25 @@ bitcoin_cli_LDADD = \
   $(LIBBITCOIN_CRYPTO)
 
 bitcoin_cli_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
+#
+
+# niab-ws binary #
+niab_ws_SOURCES = niab-ws.cpp
+niab_ws_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
+niab_ws_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+niab_ws_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+
+if TARGET_WINDOWS
+niab_ws_SOURCES += niab-ws-res.rc
+endif
+
+niab_ws_LDADD = \
+  $(LIBBITCOIN_CLI) \
+  $(LIBUNIVALUE) \
+  $(LIBBITCOIN_UTIL) \
+  $(LIBBITCOIN_CRYPTO)
+
+niab_ws_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS) $(FCGI_LIBS)
 #
 
 # bitcoin-tx binary #

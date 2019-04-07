@@ -281,6 +281,9 @@ if test "x$enable_debug" = xyes; then
   AX_CHECK_PREPROC_FLAG([-DDEBUG],[[DEBUG_CPPFLAGS="$DEBUG_CPPFLAGS -DDEBUG"]],,[[$CXXFLAG_WERROR]])
   AX_CHECK_PREPROC_FLAG([-DDEBUG_LOCKORDER],[[DEBUG_CPPFLAGS="$DEBUG_CPPFLAGS -DDEBUG_LOCKORDER"]],,[[$CXXFLAG_WERROR]])
   AX_CHECK_COMPILE_FLAG([-ftrapv],[DEBUG_CXXFLAGS="$DEBUG_CXXFLAGS -ftrapv"],,[[$CXXFLAG_WERROR]])
+	CXXFLAGS="-g -O0"
+	CFLAGS="-g -O0"
+	DEBUG_CXXFLAGS="-g -O0"
 fi
 
 if test x$use_sanitizers != x; then
@@ -441,6 +444,12 @@ AC_ARG_ENABLE([util-wallet],
   [build bitcoin-wallet])],
   [build_bitcoin_wallet=$enableval],
   [build_bitcoin_wallet=$build_bitcoin_utils])
+
+AC_ARG_ENABLE([niab-ws],
+  [AS_HELP_STRING([--enable-niab-ws],
+  [build niab-ws])],
+  [build_niab_ws=$enableval],
+  [build_niab_ws=$build_bitcoin_utils])
 
 AC_ARG_WITH([libs],
   [AS_HELP_STRING([--with-libs],
@@ -1237,6 +1246,11 @@ AM_CONDITIONAL([EMBEDDED_UNIVALUE],[test x$need_bundled_univalue = xyes])
 AC_SUBST(UNIVALUE_CFLAGS)
 AC_SUBST(UNIVALUE_LIBS)
 
+dnl check for fastcgi lib, for the tests only
+if test x$build_niab_ws != xno; then
+  AC_CHECK_HEADER([fcgio.h],, AC_MSG_ERROR(fastcgi headers missing),)
+  AC_CHECK_LIB([fcgi],[FCGI_Accept],FCGI_LIBS=-lfcgi++ -lfcgi,AC_MSG_ERROR(fastcgi libraries missing))
+fi
 
 if test x$have_protobuf != xno &&
    test x$enable_bip70 != xno; then
@@ -1258,6 +1272,10 @@ AC_MSG_RESULT($build_bitcoin_tx)
 AC_MSG_CHECKING([whether to build bitcoin-wallet])
 AM_CONDITIONAL([BUILD_BITCOIN_WALLET], [test x$build_bitcoin_wallet = xyes])
 AC_MSG_RESULT($build_bitcoin_wallet)
+
+AC_MSG_CHECKING([whether to build niab-ws])
+AM_CONDITIONAL([BUILD_NIAB_WS], [test x$build_niab_ws = xyes])
+AC_MSG_RESULT($build_niab_ws)
 
 AC_MSG_CHECKING([whether to build libraries])
 AM_CONDITIONAL([BUILD_BITCOIN_LIBS], [test x$build_bitcoin_libs = xyes])
@@ -1481,6 +1499,7 @@ AC_SUBST(CRYPTO_LIBS)
 AC_SUBST(SSL_LIBS)
 AC_SUBST(EVENT_LIBS)
 AC_SUBST(EVENT_PTHREADS_LIBS)
+AC_SUBST(FCGI_LIBS)
 AC_SUBST(ZMQ_LIBS)
 AC_SUBST(PROTOBUF_LIBS)
 AC_SUBST(QR_LIBS)
