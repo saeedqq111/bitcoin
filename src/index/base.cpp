@@ -66,6 +66,28 @@ bool BaseIndex::Init()
         m_best_block_index = FindForkInGlobalIndex(::ChainActive(), locator);
     }
     m_synced = m_best_block_index.load() == ::ChainActive().Tip();
+    if (!m_synced) {
+        bool prune_violation = false;
+        if (!m_best_block_index) {
+            // index is not built yet
+            // make sure we have all block data back to the genesis
+            const CBlockIndex* block = ::ChainActive().Tip();
+            while (block->pprev && (block->pprev->nStatus & BLOCK_HAVE_DATA)) {
+                block = block->pprev;
+            }
+            prune_violation = block != ::ChainActive().Genesis();
+        }
+        // in case the index has a best block set and is not fully synced
+        // check if we have the required blocks to continue building the index
+        else if (!(m_best_block_index.load()->nStatus & BLOCK_HAVE_DATA)) {
+            prune_violation = true;
+        }
+        if (prune_violation) {
+            // throw error and graceful shutdown if we can't build the index
+            FatalError("%s: %s  best block of the index goes beyond pruned data. Please disable the index or reindex (which will download the whole blockchain again)", __func__, GetName());
+            return false;
+        }
+    }
     return true;
 }
 
@@ -178,6 +200,10 @@ bool BaseIndex::Rewind(const CBlockIndex* current_tip, const CBlockIndex* new_ti
     assert(current_tip->GetAncestor(new_tip->nHeight) == new_tip);
 
     // In the case of a reorg, ensure persisted block locator is not stale.
+    // Pruning has a minimum of 288 blocks-to-keep and getting the index
+    // out of sync may be possible but a users fault.
+    // In case we reorg beyond the pruned depth, ReadBlockFromDisk would
+    // throw and led to a graceful shutdown
     m_best_block_index = new_tip;
     if (!Commit()) {
         // If commit fails, revert the best block index to avoid corruption.
