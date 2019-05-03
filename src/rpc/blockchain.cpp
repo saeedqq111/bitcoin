@@ -1016,6 +1016,13 @@ static UniValue pruneblockchain(const JSONRPCRequest& request)
     if (!fPruneMode)
         throw JSONRPCError(RPC_MISC_ERROR, "Cannot prune blocks because node is not in prune mode.");
 
+    // reject manual pruning in case if a blockfilterindex is syncing
+    ForEachBlockFilterIndex([](BlockFilterIndex& index) {
+        if (!index.IsSynced()) {
+            throw JSONRPCError(RPC_MISC_ERROR, "Cannot prune blocks because blockfilterindex is syncing.");
+        }
+    });
+
     LOCK(cs_main);
 
     int heightParam = request.params[0].get_int();
