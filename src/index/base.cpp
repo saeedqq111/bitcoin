@@ -23,7 +23,7 @@ static void FatalError(const char* fmt, const Args&... args)
     SetMiscWarning(strMessage);
     LogPrintf("*** %s\n", strMessage);
     uiInterface.ThreadSafeMessageBox(
-        "Error: A fatal internal error occurred, see debug.log for details",
+        strMessage,
         "", CClientUIInterface::MSG_ERROR);
     StartShutdown();
 }
