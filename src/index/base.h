@@ -100,6 +100,8 @@ public:
     /// not block and immediately returns false.
     bool BlockUntilSyncedToCurrentChain();
 
+    bool IsSynced() const { return m_synced; }
+
     void Interrupt();
 
     /// Start initializes the sync state and registers the instance as a
