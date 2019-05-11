@@ -352,6 +352,8 @@ crypto_libbitcoin_crypto_base_a_SOURCES = \
   crypto/aes.h \
   crypto/chacha_poly_aead.h \
   crypto/chacha_poly_aead.cpp \
+  crypto/chacha_poly_aead_openssh.h \
+  crypto/chacha_poly_aead_openssh.cpp \
   crypto/chacha20.h \
   crypto/chacha20.cpp \
   crypto/common.h \
