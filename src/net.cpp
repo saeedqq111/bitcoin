@@ -578,7 +578,7 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes, bool& complete
         if (handled < 0)
             return false;
 
-        if (msg.in_data && msg.hdr.nMessageSize > MAX_PROTOCOL_MESSAGE_LENGTH) {
+        if (msg.in_data && msg.GetMessageSize() > MAX_PROTOCOL_MESSAGE_LENGTH) {
             LogPrint(BCLog::NET, "Oversized message from peer=%i, disconnecting\n", GetId());
             return false;
         }
@@ -589,11 +589,11 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes, bool& complete
         if (msg.complete()) {
             //store received bytes per message command
             //to prevent a memory DOS, only allow valid commands
-            mapMsgCmdSize::iterator i = mapRecvBytesPerMsgCmd.find(msg.hdr.pchCommand);
+            mapMsgCmdSize::iterator i = mapRecvBytesPerMsgCmd.find(msg.GetCommand());
             if (i == mapRecvBytesPerMsgCmd.end())
                 i = mapRecvBytesPerMsgCmd.find(NET_MESSAGE_COMMAND_OTHER);
             assert(i != mapRecvBytesPerMsgCmd.end());
-            i->second += msg.hdr.nMessageSize + CMessageHeader::HEADER_SIZE;
+            i->second += msg.GetMessageSize() + msg.GetHeaderSize();
 
             msg.nTime = nTimeMicros;
             complete = true;
@@ -684,6 +684,38 @@ const uint256& CNetMessage::GetMessageHash() const
     if (data_hash.IsNull())
         hasher.Finalize(data_hash.begin());
     return data_hash;
+}
+
+bool CNetMessage::ValidMessageStart(const CMessageHeader::MessageStartChars& message_start) const {
+    return (memcmp(hdr.pchMessageStart, message_start, CMessageHeader::MESSAGE_START_SIZE) == 0);
+}
+
+bool CNetMessage::ValidHeader(const CMessageHeader::MessageStartChars& message_start) const {
+    return hdr.IsValid(message_start);
+}
+
+bool CNetMessage::ValidChecksum() const {
+    const uint256& hash = GetMessageHash();
+    if (memcmp(hash.begin(), hdr.pchChecksum, CMessageHeader::CHECKSUM_SIZE) != 0) {
+        LogPrint(BCLog::NET, "%s(%s, %u bytes): CHECKSUM ERROR expected %s was %s\n", __func__,
+           SanitizeString(hdr.GetCommand()), hdr.nMessageSize,
+           HexStr(hash.begin(), hash.begin()+CMessageHeader::CHECKSUM_SIZE),
+           HexStr(hdr.pchChecksum, hdr.pchChecksum+CMessageHeader::CHECKSUM_SIZE));
+        return false;
+    }
+    return true;
+}
+
+std::string CNetMessage::GetCommand() const {
+    return hdr.GetCommand();
+}
+
+uint32_t CNetMessage::GetMessageSize() const {
+    return hdr.nMessageSize;
+}
+
+size_t CNetMessage::GetHeaderSize() const {
+    return CMessageHeader::HEADER_SIZE;
 }
 
 size_t CConnman::SocketSendData(CNode *pnode) const EXCLUSIVE_LOCKS_REQUIRED(pnode->cs_vSend)

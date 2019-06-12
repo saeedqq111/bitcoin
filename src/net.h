@@ -575,6 +575,7 @@ class CNetMessage {
 private:
     mutable CHash256 hasher;
     mutable uint256 data_hash;
+    const uint256& GetMessageHash() const;
 public:
     bool in_data;                   // parsing header (false) or data (true)
 
@@ -601,7 +602,12 @@ public:
         return (hdr.nMessageSize == nDataPos);
     }
 
-    const uint256& GetMessageHash() const;
+    bool ValidMessageStart(const CMessageHeader::MessageStartChars& message_start) const;
+    bool ValidHeader(const CMessageHeader::MessageStartChars& message_start) const;
+    bool ValidChecksum() const;
+    std::string GetCommand() const;
+    uint32_t GetMessageSize() const;
+    size_t GetHeaderSize() const;
 
     void SetVersion(int nVersionIn)
     {
