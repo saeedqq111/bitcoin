@@ -605,6 +605,18 @@ public:
  * transport protocol agnostic CNetMessage (command & payload)
  */
 class TransportDeserializer {
+public:
+    virtual void Reset() = 0;
+    virtual bool Complete() const = 0;
+    virtual bool OversizedMessageDetected() const = 0;
+    virtual void SetVersion(int nVersionIn) = 0;
+    virtual int Read(const char *pch, unsigned int nBytes) = 0;
+    virtual CNetMessage GetMessage(const CMessageHeader::MessageStartChars& message_start, int64_t time) = 0;
+    virtual ~TransportDeserializer() {}
+};
+
+class V1TransportDeserializer : public TransportDeserializer
+{
 private:
     mutable CHash256 hasher;
     mutable uint256 data_hash;
@@ -618,7 +630,7 @@ public:
     CDataStream vRecv;              // received message data
     unsigned int nDataPos;
 
-    TransportDeserializer(const CMessageHeader::MessageStartChars& pchMessageStartIn, int nTypeIn, int nVersionIn) : hdrbuf(nTypeIn, nVersionIn), hdr(pchMessageStartIn), vRecv(nTypeIn, nVersionIn) {
+    V1TransportDeserializer(const CMessageHeader::MessageStartChars& pchMessageStartIn, int nTypeIn, int nVersionIn) : hdrbuf(nTypeIn, nVersionIn), hdr(pchMessageStartIn), vRecv(nTypeIn, nVersionIn) {
         Reset();
     }
 
@@ -633,7 +645,7 @@ public:
         hasher.Reset();
     }
 
-    bool complete() const
+    bool Complete() const
     {
         if (!in_data)
             return false;
@@ -647,7 +659,12 @@ public:
         hdrbuf.SetVersion(nVersionIn);
         vRecv.SetVersion(nVersionIn);
     }
-
+    bool OversizedMessageDetected() const {
+        return (in_data && hdr.nMessageSize > MAX_PROTOCOL_MESSAGE_LENGTH);
+    }
+    int Read(const char *pch, unsigned int nBytes) {
+        return in_data ? readData(pch, nBytes) : readHeader(pch, nBytes);
+    }
     int readHeader(const char *pch, unsigned int nBytes);
     int readData(const char *pch, unsigned int nBytes);
 
