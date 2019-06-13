@@ -1,0 +1,19 @@
+version: v1.0
+name: Using C++ in Semaphore 2.0
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+blocks:
+  - name: Compile and run C++ code
+    task:
+      jobs:
+      - name: Test
+        commands:
+          - ./autogen.sh
+          - cd depends
+          - make HOST=x86_64-linux-gnu -j4 V=1
+          - cd ..
+          - ./configure --prefix=`pwd`/depends/x86_64-linux-gnu
+          
